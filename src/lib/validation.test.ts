@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { displayNameSchema, eventSchema, tableSchema } from '@/lib/validation'
+import { displayNameSchema, eventSchema, tableSchema } from './validation'
 
 describe('displayNameSchema (Onboarding-Regeln aus plan.md: 2–50 Zeichen)', () => {
     it('nimmt gültige Namen an und trimmt Anführungszeichen-Whitespace', () => {

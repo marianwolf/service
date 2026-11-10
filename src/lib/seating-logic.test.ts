@@ -3,14 +3,7 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import {
-    findOwnSeating,
-    firstFreeSeat,
-    isSeatFree,
-    occupiedCount,
-    seatsTaken,
-    validateClaim,
-} from '@/lib/seating-logic'
+import { findOwnSeating, firstFreeSeat, isSeatFree, occupiedCount, seatsTaken, validateClaim } from './seating-logic'
 import type { Seating } from '@/lib/types'
 
 const seating = (id: string, profileId: string, tableId: string, seatNo: number): Seating => ({

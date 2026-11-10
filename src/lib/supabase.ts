@@ -4,9 +4,14 @@
  * - detectSessionInUrl nur im Web: dort empfängt die Route den OAuth-Return
  *   direkt in der URL (PKCE). Auf Native kommt der Return per Deep-Link
  *   zurück und wird in lib/auth.ts manuell gesetzt.
+ *
+ * Server-Rendering (Expo Async Routes, Node-Bundle `resolver.environment=node`):
+ * dort darf kein Browser-API (window/localStorage) angerufen werden.
+ * Der Client wird auf dem Server mit No-Op-Storage erzeugt (keine Session) —
+ * im Browser-Bundle übernimmt danach AsyncStorage die Persistenz.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { Platform } from 'react-native'
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL
@@ -20,12 +25,26 @@ if (!supabaseUrl || !supabaseAnonKey) {
     )
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+/**
+ * Server-Side-Rendering im Web-Bundle erkennen: Platform web, aber kein window.
+ * (Native hat ebenfalls kein window — deshalb die Platform-Kombination.)
+ */
+export const isServerRender = Platform.OS === 'web' && typeof window === 'undefined'
+
+/** No-Op-Storage für Server-Render (liefert keine Session, wirft nichts). */
+const serverStorage = {
+    getItem: async (_key: string) => null,
+    setItem: async (_key: string, _value: string) => undefined,
+    removeItem: async (_key: string) => undefined,
+} as const
+
+export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-        storage: AsyncStorage,
+        storage: isServerRender ? serverStorage : AsyncStorage,
         persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: Platform.OS === 'web',
+        // Server rendert nur; Token-Refresh gehört in den Browser/Bildschirm.
+        autoRefreshToken: !isServerRender,
+        detectSessionInUrl: !isServerRender && Platform.OS === 'web',
     },
 })
 

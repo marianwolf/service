@@ -14,7 +14,8 @@ import { Platform } from 'react-native'
 import { supabase } from '@/lib/supabase'
 
 // Pflicht für Web: verhindert, dass der Browser-Tab hängen bleibt.
-if (Platform.OS === 'web') {
+// (Nur im echten Browser – beim Server-Render hat expo-web-browser keine DOM-Environment.)
+if (Platform.OS === 'web' && typeof window !== 'undefined') {
     WebBrowser.maybeCompleteAuthSession()
 }
 
