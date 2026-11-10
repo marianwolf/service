@@ -5,6 +5,7 @@
   "dependencies": {
     "@expo/ui": "~58.0.27",
     "@hookform/resolvers": "^7.0.5",
+    "@opencode/cli": "^2.2.7",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.119.0",
     "@tanstack/react-query": "^5.107.1",
@@ -23,6 +24,8 @@
     "expo-system-ui": "~58.0.7",
     "expo-web-browser": "~58.0.7",
     "nativewind": "5.0.0-rc.0",
+    "openwiki": "^0.9.0",
+    "prettier": "^3.9.10",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-hook-form": "^7.91.0",
@@ -61,6 +64,8 @@
     "lightningcss": "1.30.1"
   },
   "allowScripts": {
-    "@tailwindcss/oxide@4.1.12": true
+    "@tailwindcss/oxide@4.1.12": true,
+    "@opencode/cli@2.2.7": true,
+    "better-sqlite3@12.11.1": true
   }
 }
