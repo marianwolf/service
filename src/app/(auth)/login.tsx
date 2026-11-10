@@ -3,12 +3,22 @@
  */
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native'
+import { useLocalSearchParams } from 'expo-router'
 
 import { signInWithProvider } from '@/lib/auth'
 
+/** Meldung von app/auth-callback.tsx; Kurz-Codes ohne Sonderzeichen, damit
+ * SSR und Hydration identische Params interpretieren. */
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+    exchange: 'Die Anmeldung ist fehlgeschlagen. Bitte versuche es erneut.',
+}
+
 export default function Login() {
+    const { authError } = useLocalSearchParams<{ authError?: string }>()
     const [busy, setBusy] = useState<'google' | 'apple' | null>(null)
-    const [lastError, setLastError] = useState<string | null>(null)
+    const [lastError, setLastError] = useState<string | null>(
+        typeof authError === 'string' ? (AUTH_ERROR_MESSAGES[authError] ?? AUTH_ERROR_MESSAGES.exchange) : null
+    )
 
     const signIn = useCallback(async (provider: 'google' | 'apple') => {
         setLastError(null)

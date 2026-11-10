@@ -1,9 +1,13 @@
 /**
  * Supabase-Client (plan.md Abschnitt 2/7).
  * - Session-Persistenz über AsyncStorage (Offline-Fallback: letzter Stand bleibt erhalten)
- * - detectSessionInUrl nur im Web: dort empfängt die Route den OAuth-Return
- *   direkt in der URL (PKCE). Auf Native kommt der Return per Deep-Link
- *   zurück und wird in lib/auth.ts manuell gesetzt.
+ * - OAuth-Rückkehr Web: `code`/`error` landen auf der Route app/auth-callback.tsx,
+ *   die explizit austauscht/weiterleitet. detectSessionInUrl ist daher aus —
+ *   ein implizites „Sniffen" beim Boot würde sonst dieselben Auth-Parameter
+ *   einmal SSR-rendern und zum Client-Zeitpunkt ändern (Hydration-Mismatch),
+ *   und mit dem Callback-Screen doppelt austauschen.
+ * Auf Native kommt der Return per Deep-Link zurück und wird in lib/auth.ts
+ * manuell gesetzt.
  *
  * Server-Rendering (Expo Async Routes, Node-Bundle `resolver.environment=node`):
  * dort darf kein Browser-API (window/localStorage) angerufen werden.
@@ -44,7 +48,8 @@ export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKe
         persistSession: true,
         // Server rendert nur; Token-Refresh gehört in den Browser/Bildschirm.
         autoRefreshToken: !isServerRender,
-        detectSessionInUrl: !isServerRender && Platform.OS === 'web',
+        // OAuth-Rückkehr immer explizit (app/auth-callback.tsx bzw. Deep-Link in lib/auth.ts).
+        detectSessionInUrl: false,
     },
 })
 

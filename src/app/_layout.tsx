@@ -5,22 +5,27 @@
  */
 import '@/global.css'
 
-import { QueryClientProvider } from '@tanstack/react-query'
-import { Stack } from 'expo-router'
-import { StatusBar } from 'expo-status-bar'
 import { useEffect } from 'react'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { Platform } from 'react-native'
+import { Stack } from 'expo-router'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { useLinkingURL } from 'expo-linking'
+import { StatusBar } from 'expo-status-bar'
 
 import { queryClient } from '@/lib/queries'
 import { SessionProvider } from '@/hooks/use-session'
 import { createSessionFromUrl } from '@/lib/auth'
 
-/** Native: Deep-Link mit Tokens auch dann setzen, wenn die Auth-Session
- * beim Schließen des Browsers nicht abgefangen werden konnte (app getötet). */
+/** Native: Deep-Link mit Tokens/code auch dann setzen, wenn die Auth-Session
+ * beim Schließen des Browsers nicht abgefangen werden konnte (app getötet).
+ * Web nicht: dort landet der OAuth-Return bereits auf /auth-callback — ein
+ * zweiter Austausch (useLinkingURL + Callback-Screen) würde "already used"
+ * werfen. */
 const AuthDeepLink = () => {
     const url = useLinkingURL()
     useEffect(() => {
+        if (Platform.OS === 'web') return
         if (!url) return
         if (url.includes('access_token=') || url.includes('code=')) {
             void createSessionFromUrl(url).catch(() => undefined)

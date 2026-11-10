@@ -1,11 +1,12 @@
 /**
  * OAuth-Helfer für Google/Apple (plan.md Abschnitt 3).
  *
- * Ablauf (Native): signInWithOAuth mit skipBrowserRedirect:true liefert die
- * OAuth-URL → openAuthSessionAsync öffnet den in-app Browser → der Redirect
- * (app-scheme) liefert Tokens in der URL → setSession.
- * Ablauf (Web): normales window-Redirect-Verhalten; supabase-js erkennt den
- * Code beim Boot (detectSessionInUrl, siehe lib/supabase.ts).
+ * Ablauf (Native): signInWithOAuth liefert die OAuth-URL →
+ * openAuthSessionAsync öffnet den in-app Browser → der Redirect (app-scheme)
+ * liefert `code` bzw. Tokens in der URL → exchangeCodeForSession / setSession.
+ * Ablauf (Web): normales window-Redirect-Verhalten, Rückkehr auf /auth-callback;
+ * app/auth-callback.tsx tauscht den Code explizit (die OAuth-Parameter dürfen
+ * nie in die Tabs-Route geraten — siehe dort).
  */
 import { makeRedirectUri } from 'expo-auth-session'
 import * as WebBrowser from 'expo-web-browser'
@@ -42,7 +43,15 @@ const parseAuthUrlParams = (url: string): Record<string, string> => {
 
 export const createSessionFromUrl = async (url: string) => {
     const params = parseAuthUrlParams(url)
-    const { access_token, refresh_token } = params
+    const { access_token, refresh_token, code } = params
+
+    // PKCE: Rückkehr enthält einen Autorisierungs-Code → explizit austauschen
+    // (der Verifier steckt im AsyncStorage des Clients, von signInWithOAuth).
+    if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code)
+        if (error) throw error
+        return true
+    }
 
     if (!access_token) return null
 
@@ -51,10 +60,12 @@ export const createSessionFromUrl = async (url: string) => {
     return true
 }
 
-/** Redirect-Ziel je Plattform: Web = Origin, Native = App-Scheme */
+/** Redirect-Ziel je Plattform: Web = Callback-Route, Native = App-Scheme */
+const WEB_CALLBACK_PATH = '/auth-callback'
+
 const redirectTo = () => {
     if (Platform.OS === 'web') {
-        return typeof window === 'undefined' ? undefined : window.location.origin
+        return typeof window === 'undefined' ? undefined : window.location.origin + WEB_CALLBACK_PATH
     }
     return makeRedirectUri()
 }
@@ -69,7 +80,7 @@ export const signInWithProvider = async (provider: OAuthProvider, errorHandler?:
     try {
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider,
-            // `redirectTo` → im Web Origin, Native → Scheme; Supabase-Dashboard URL-Konfig
+            // `redirectTo` → im Web /auth-callback, Native → Scheme; Supabase-Dashboard URL-Konfig
             options: {
                 redirectTo: redirectTo(),
             },
@@ -77,8 +88,8 @@ export const signInWithProvider = async (provider: OAuthProvider, errorHandler?:
         if (error) throw error
 
         if (Platform.OS === 'web') {
-            // supabase-js leitet selbst weiter; detectSessionInUrl
-            // (lib/supabase.ts) setzt beim Reload die Session.
+            // supabase-js leitet selbst zur Authorize-URL weiter; die Rückkehr
+            // (Error oder code) landet auf /auth-callback (Redirect-Ziel oben).
             return
         }
         const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo())
